@@ -426,8 +426,8 @@ class OpenAICompatibleProvider(ModelProvider):
             f"Creating OpenAI-compatible model: {model_id} (base_url: {self.config.base_url})"
         )
 
-        # Create the base OpenAILike model
-        return OpenAILike(
+        # Create the base OpenAILike model with disabled structured outputs for DeepSeek compatibility
+        model = OpenAILike(
             id=model_id,
             api_key=self.config.api_key,
             base_url=self.config.base_url,
@@ -437,6 +437,16 @@ class OpenAICompatibleProvider(ModelProvider):
             frequency_penalty=params.get("frequency_penalty"),
             presence_penalty=params.get("presence_penalty"),
         )
+        
+        # Explicitly disable structured outputs for DeepSeek compatibility
+        if hasattr(model, 'supports_native_structured_outputs'):
+            model.supports_native_structured_outputs = False
+        if hasattr(model, 'supports_json_schema'):
+            model.supports_json_schema = False
+        if hasattr(model, 'supports_response_format'):
+            model.supports_response_format = False
+            
+        return model
 
     def create_embedder(self, model_id: Optional[str] = None, **kwargs):
         """Create embedder via OpenAI-compatible API"""

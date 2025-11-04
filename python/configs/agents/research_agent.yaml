@@ -9,12 +9,13 @@ enabled: true
 models:
   # Primary model for reasoning and generation
   primary:
-    model_id: "google/gemini-2.5-flash"
-    provider: "openrouter"
+    model_id: "deepseek-chat"
+    provider: "openai-compatible"
     # Provider-specific model mappings for fallback
     provider_models:
       siliconflow: "Qwen/Qwen3-235B-A22B-Thinking-2507"
       google: "gemini-2.5-flash"
+      openrouter: "google/gemini-2.5-flash"  # Fallback to original
     parameters:
       # temperature: 0.7
       # max_tokens: 8192

@@ -17,6 +17,8 @@ from valuecell.agents.research_agent.sources import (
     fetch_event_sec_filings,
     fetch_periodic_sec_filings,
     web_search,
+    search_market_assets,
+    get_asset_details,
 )
 from valuecell.agents.utils.context import build_ctx_from_dep
 from valuecell.core.agent import streaming
@@ -32,6 +34,8 @@ class ResearchAgent(BaseAgent):
             fetch_event_sec_filings,
             fetch_ashare_filings,
             web_search,
+            search_market_assets,
+            get_asset_details,
         ]
         self.knowledge_research_agent = Agent(
             model=model_utils_mod.get_model_for_agent("research_agent"),

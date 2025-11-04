@@ -9,8 +9,8 @@
 
 # Model Provider Configuration
 models:
-  # Primary provider
-  primary_provider: "openrouter"
+  # Primary provider - Changed to DeepSeek for users who cannot access OpenAI
+  primary_provider: "deepseek"
   
   # Global default settings
   defaults:
@@ -34,6 +34,10 @@ models:
     openai:
       config_file: "providers/openai.yaml"
       api_key_env: "OPENAI_API_KEY"
+    
+    deepseek:
+      config_file: "providers/deepseek.yaml"
+      api_key_env: "DEEPSEEK_API_KEY"
     
     openai-compatible:
       config_file: "providers/openai-compatible.yaml"

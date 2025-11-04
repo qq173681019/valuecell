@@ -27,6 +27,7 @@ ValueCell supports multiple LLM providers. Choose at least one:
 | **SiliconFlow** | [siliconflow.cn](https://www.siliconflow.cn/)       |
 | **Google**      | [ai.google.dev](https://ai.google.dev/)             |
 | **OpenAI**      | [platform.openai.com](https://platform.openai.com/) |
+| **DeepSeek**    | [platform.deepseek.com](https://platform.deepseek.com/) |
 
 ### Step 2: Configure .env File
 
@@ -48,6 +49,9 @@ SILICONFLOW_API_KEY=sk-xxxxxxxxxxxxx
 
 # Or Google Gemini
 GOOGLE_API_KEY=AIzaSyDxxxxxxxxxxxxx
+
+# Or DeepSeek (great alternative to OpenAI, accessible in more regions)
+DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxx
 
 # Optional: Set primary provider (auto-detected if not set)
 PRIMARY_PROVIDER=openrouter

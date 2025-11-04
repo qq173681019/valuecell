@@ -490,34 +490,115 @@ class AutoTradingAgent(BaseAgent):
             TradingRequest object with parsed parameters
         """
         try:
+            # First, check if this is actually a trading-related query
+            query_lower = query.lower()
+            trading_keywords = [
+                # English keywords
+                'trade', 'trading', 'buy', 'sell', 'bitcoin', 'btc', 'ethereum', 'eth', 
+                'crypto', 'cryptocurrency', 'investment', 'portfolio', 'signal', 'auto',
+                # Chinese keywords
+                '交易', '买', '卖', '比特币', '以太坊', '加密货币', '投资', '自动', '信号', '策略'
+            ]
+            
+            is_trading_query = any(keyword in query_lower for keyword in trading_keywords)
+            
+            if not is_trading_query:
+                # This doesn't seem to be a trading request, provide a helpful response
+                raise ValueError(
+                    "I'm an Auto Trading Agent specialized in cryptocurrency trading. "
+                    "To start trading, please specify which cryptocurrencies you'd like to trade. "
+                    "For example: 'Trade Bitcoin and Ethereum' or '交易比特币和以太坊'"
+                )
+
             parse_prompt = f"""
-            Parse the following user query and extract auto trading configuration parameters:
+            Parse the following user query and extract auto trading configuration parameters.
+            The query can be in English or Chinese.
             
             User query: "{query}"
             
             Please identify:
             1. crypto_symbols: List of cryptocurrency symbols to trade (e.g., BTC-USD, ETH-USD, SOL-USD)
-               - If user mentions "Bitcoin", extract as "BTC-USD"
-               - If user mentions "Ethereum", extract as "ETH-USD"
+               - If user mentions "Bitcoin/比特币", extract as "BTC-USD"
+               - If user mentions "Ethereum/以太坊", extract as "ETH-USD"
                - If user mentions "Solana", extract as "SOL-USD"
+               - If user mentions "Dogecoin/狗狗币", extract as "DOGE-USD"
                - Always use format: SYMBOL-USD
+               - If no specific symbols mentioned but trading is requested, default to ["BTC-USD"]
             2. initial_capital: Initial trading capital in USD (default: 100000 if not specified)
             3. use_ai_signals: Whether to use AI-enhanced signals (default: true)
-            4. agent_model: Model ID for trading decisions (default: DEFAULT_AGENT_MODEL)
+            4. agent_models: List of model IDs for trading decisions (default: ["deepseek/deepseek-v3.1-terminus"])
             5. exchange (optional): Trading venue. Use "paper" (default) or "okx" if the user requests real execution.
             6. exchange_network (optional): OKX network to use, default "paper". Accept "paper" or "testnet".
             7. allow_live_trading (optional): Boolean that must be true to enable OKX live trading.
 
             Examples:
-            - "Trade Bitcoin and Ethereum with $50000" -> {{"crypto_symbols": ["BTC-USD", "ETH-USD"], "initial_capital": 50000, "use_ai_signals": true}}
-            - "Start auto trading BTC-USD" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true}}
-            - "Trade BTC with AI signals" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true}}
-            - "Trade BTC with AI signals using DeepSeek model" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true, "agent_models": ["deepseek/deepseek-v3.1-terminus"]}}
-            - "Trade Bitcoin, SOL, Eth and DOGE with 100000 capital, using x-ai/grok-4, deepseek/deepseek-v3.1-terminus model" -> {{"crypto_symbols": ["BTC-USD", "SOL-USD", "ETH-USD", "DOGE-USD"], "initial_capital": 100000, "use_ai_signals": true, "agent_models": ["x-ai/grok-4", "deepseek/deepseek-v3.1-terminus"]}}
+            - "Trade Bitcoin and Ethereum with $50000" -> {{"crypto_symbols": ["BTC-USD", "ETH-USD"], "initial_capital": 50000, "use_ai_signals": true, "agent_models": ["deepseek/deepseek-v3.1-terminus"]}}
+            - "Start auto trading BTC-USD" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true, "agent_models": ["deepseek/deepseek-v3.1-terminus"]}}
+            - "Trade BTC with AI signals" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true, "agent_models": ["deepseek/deepseek-v3.1-terminus"]}}
+            - "交易比特币" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true, "agent_models": ["deepseek/deepseek-v3.1-terminus"]}}
+            - "开始自动交易" -> {{"crypto_symbols": ["BTC-USD"], "initial_capital": 100000, "use_ai_signals": true, "agent_models": ["deepseek/deepseek-v3.1-terminus"]}}
+            
+            IMPORTANT: Always ensure crypto_symbols contains at least one symbol. If no specific cryptocurrency is mentioned but trading is requested, use ["BTC-USD"] as default.
             """
 
             response = await self.parser_agent.arun(parse_prompt)
-            trading_request = response.content
+            
+            # Handle both structured output and fallback string parsing
+            if isinstance(response.content, TradingRequest):
+                # Structured output is working
+                trading_request = response.content
+            else:
+                # Fallback: parse JSON string manually (for providers without structured output)
+                try:
+                    import json
+                    # Try to extract JSON from the response content
+                    content_str = str(response.content)
+                    
+                    # Try to find JSON block in the response
+                    start_idx = content_str.find('{')
+                    end_idx = content_str.rfind('}') + 1
+                    
+                    if start_idx >= 0 and end_idx > start_idx:
+                        json_str = content_str[start_idx:end_idx]
+                        parsed_data = json.loads(json_str)
+                        
+                        # Ensure required fields have defaults
+                        if not parsed_data.get('crypto_symbols'):
+                            parsed_data['crypto_symbols'] = ['BTC-USD']
+                        if not parsed_data.get('agent_models'):
+                            parsed_data['agent_models'] = ['deepseek/deepseek-v3.1-terminus']
+                        if 'initial_capital' not in parsed_data:
+                            parsed_data['initial_capital'] = 100000
+                        if 'use_ai_signals' not in parsed_data:
+                            parsed_data['use_ai_signals'] = True
+                            
+                        trading_request = TradingRequest(**parsed_data)
+                    else:
+                        # No JSON found, create default trading request
+                        logger.warning("No JSON found in response, using default configuration")
+                        trading_request = TradingRequest(
+                            crypto_symbols=['BTC-USD'],
+                            initial_capital=100000,
+                            use_ai_signals=True,
+                            agent_models=['deepseek/deepseek-v3.1-terminus']
+                        )
+                        
+                except (json.JSONDecodeError, ValueError, TypeError) as parse_error:
+                    logger.warning(f"Failed to parse response as JSON: {parse_error}")
+                    logger.warning(f"Response content: {response.content}")
+                    # Fall back to default configuration
+                    trading_request = TradingRequest(
+                        crypto_symbols=['BTC-USD'],
+                        initial_capital=100000,
+                        use_ai_signals=True,
+                        agent_models=['deepseek/deepseek-v3.1-terminus']
+                    )
+
+            # Final validation
+            if not trading_request.crypto_symbols:
+                trading_request.crypto_symbols = ['BTC-USD']
+            if not trading_request.agent_models:
+                trading_request.agent_models = ['deepseek/deepseek-v3.1-terminus']
 
             logger.info(f"Parsed trading request: {trading_request}")
             return trading_request
@@ -969,11 +1050,30 @@ class AutoTradingAgent(BaseAgent):
                 trading_request = await self._parse_trading_request(query)
                 logger.info(f"Parsed request: {trading_request}")
             except Exception as e:
+                error_message = str(e)
                 logger.error(f"Failed to parse trading request: {e}")
-                yield streaming.failed(
-                    "**Parse Error**: Could not parse trading configuration from your query. "
-                    "Please specify cryptocurrency symbols (e.g., 'Trade Bitcoin and Ethereum')."
-                )
+                
+                # Check if this is a non-trading query
+                if "specialized in cryptocurrency trading" in error_message:
+                    yield streaming.message_chunk(
+                        "👋 **Hello!** I'm your Auto Trading Agent.\n\n"
+                        f"{error_message}\n\n"
+                        "**Example commands:**\n"
+                        "- `Trade Bitcoin` or `交易比特币`\n"
+                        "- `Start auto trading BTC and ETH`\n" 
+                        "- `Trade Bitcoin with $50000 capital`\n"
+                        "- `Status` - Check current trading status\n"
+                        "- `Stop` - Stop all trading\n\n"
+                    )
+                else:
+                    yield streaming.failed(
+                        "**Parse Error**: Could not parse trading configuration from your query.\n\n"
+                        "Please specify cryptocurrency symbols you'd like to trade.\n\n"
+                        "**Examples:**\n"
+                        "- 'Trade Bitcoin and Ethereum'\n"
+                        "- 'Start auto trading BTC-USD'\n"
+                        "- '交易比特币和以太坊'\n\n"
+                    )
                 return
 
             # Initialize session structure if needed

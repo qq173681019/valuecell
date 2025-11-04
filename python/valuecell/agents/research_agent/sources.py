@@ -2,7 +2,7 @@ import os
 import re
 from datetime import date, datetime
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional, Sequence, Dict, Any
 
 import aiofiles
 import aiohttp
@@ -690,3 +690,158 @@ async def fetch_ashare_filings(
     # Write to files and import to knowledge base
     knowledge_dir = Path(get_knowledge_path())
     return await _write_and_ingest_ashare(filings_data, knowledge_dir)
+
+
+async def search_market_assets(
+    query: str,
+    asset_types: Optional[List[str]] = None,
+    limit: int = 20
+) -> Dict[str, Any]:
+    """Search for financial assets including stocks, ETFs, and other securities.
+    
+    This function provides access to real-time market data through the ValueCell
+    asset management system, which integrates Yahoo Finance and AKShare data sources.
+    
+    Args:
+        query: Search query (ticker symbol, company name, or keywords)
+        asset_types: List of asset types to filter by (e.g., ["STOCK", "ETF", "FUND"])
+        limit: Maximum number of results to return (default: 20)
+        
+    Returns:
+        Dict containing search results with asset information including:
+        - symbol: Asset ticker symbol
+        - name: Full company/asset name
+        - asset_type: Type of asset (STOCK, ETF, etc.)
+        - exchange: Exchange where asset is traded
+        - currency: Trading currency
+        - current_price: Latest price (if available)
+        - market_cap: Market capitalization
+        - description: Asset description
+        
+    Examples:
+        # Search for Apple stock
+        results = await search_market_assets("AAPL")
+        
+        # Search for ETFs only
+        results = await search_market_assets("S&P 500", asset_types=["ETF"])
+        
+        # Search for Chinese stocks
+        results = await search_market_assets("腾讯", limit=10)
+    """
+    try:
+        # Import here to avoid circular dependency
+        from valuecell.server.services.assets.asset_service import get_asset_service
+        
+        # Get asset service instance
+        asset_service = get_asset_service()
+        
+        # Perform search
+        search_result = await asset_service.search_assets(
+            query=query,
+            asset_types=asset_types,
+            limit=limit,
+            language="zh-Hans"  # Support Chinese localization
+        )
+        
+        if search_result.get("success", False):
+            return {
+                "success": True,
+                "results": search_result.get("results", []),
+                "count": search_result.get("count", 0),
+                "query": query,
+                "message": f"Found {search_result.get('count', 0)} assets matching '{query}'"
+            }
+        else:
+            return {
+                "success": False,
+                "results": [],
+                "count": 0,
+                "query": query,
+                "error": search_result.get("error", "Search failed"),
+                "message": f"No assets found matching '{query}'"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "results": [],
+            "count": 0,
+            "query": query,
+            "error": str(e),
+            "message": f"Error searching for assets: {str(e)}"
+        }
+
+
+async def get_asset_details(
+    ticker: str,
+    include_historical: bool = False,
+    days: int = 30
+) -> Dict[str, Any]:
+    """Get detailed information about a specific financial asset.
+    
+    Args:
+        ticker: Asset ticker symbol (e.g., "AAPL", "SPY", "000001.SZ")
+        include_historical: Whether to include historical price data
+        days: Number of days of historical data to retrieve (default: 30)
+        
+    Returns:
+        Dict containing detailed asset information including:
+        - basic_info: Symbol, name, type, exchange, currency
+        - current_price: Latest price and change information
+        - market_data: Market cap, volume, P/E ratio, etc.
+        - historical_prices: Historical price data (if requested)
+        - company_info: Business description, sector, industry
+        
+    Examples:
+        # Get basic Apple stock info
+        details = await get_asset_details("AAPL")
+        
+        # Get Apple stock with 90 days of historical data
+        details = await get_asset_details("AAPL", include_historical=True, days=90)
+    """
+    try:
+        # Import here to avoid circular dependency
+        from valuecell.server.services.assets.asset_service import get_asset_service
+        
+        # Get asset service instance
+        asset_service = get_asset_service()
+        
+        # Get basic asset details
+        detail_result = await asset_service.get_asset_details(ticker)
+        
+        if not detail_result.get("success", False):
+            return {
+                "success": False,
+                "ticker": ticker,
+                "error": detail_result.get("error", "Asset not found"),
+                "message": f"Could not find asset details for '{ticker}'"
+            }
+        
+        asset_data = detail_result.get("data", {})
+        
+        # Optionally get historical prices
+        if include_historical:
+            try:
+                historical_result = await asset_service.get_asset_historical_prices(
+                    ticker, days=days
+                )
+                if historical_result.get("success", False):
+                    asset_data["historical_prices"] = historical_result.get("data", {})
+            except Exception:
+                # Continue even if historical data fails
+                pass
+        
+        return {
+            "success": True,
+            "ticker": ticker,
+            "data": asset_data,
+            "message": f"Retrieved details for '{ticker}'"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "ticker": ticker,
+            "error": str(e),
+            "message": f"Error getting asset details for '{ticker}': {str(e)}"
+        }

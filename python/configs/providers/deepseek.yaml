@@ -1,0 +1,54 @@
+# ============================================
+# DeepSeek API Provider Configuration
+# ============================================
+# DeepSeek provides high-quality AI models with competitive pricing
+# Get your API key from: https://platform.deepseek.com/api_keys
+
+name: "DeepSeek"
+provider_type: "openai-compatible"
+
+enabled: true
+
+# Connection Configuration
+connection:
+  base_url: "https://api.deepseek.com/v1"
+  api_key_env: "DEEPSEEK_API_KEY"
+
+# Default model
+default_model: "deepseek-chat"
+
+# Model Parameters Defaults
+defaults:
+  temperature: 0.7
+  max_tokens: 4096
+
+# Available Models
+models:
+  - id: "deepseek-chat"
+    name: "DeepSeek Chat"
+    context_length: 32768
+    description: "DeepSeek's flagship conversational AI model"
+  
+  - id: "deepseek-coder"
+    name: "DeepSeek Coder"
+    context_length: 16384
+    description: "Specialized model for code generation and programming tasks"
+
+# ============================================
+# Embedding Models Configuration
+# ============================================
+# Note: DeepSeek currently doesn't provide embedding models
+# You may need to use another provider for embeddings
+
+# If DeepSeek adds embedding support in the future, configure here:
+# embedding:
+#   default_model: "deepseek-embedding"
+#   defaults:
+#     dimensions: 1536
+#     encoding_format: "float"
+#   models:
+#     - id: "deepseek-embedding"
+#       name: "DeepSeek Embedding"
+#       dimensions: 1536
+#       max_input: 8192
+#       description: "DeepSeek embedding model"

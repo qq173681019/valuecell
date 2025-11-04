@@ -1,7 +1,7 @@
 {
     "name": "BillAckmanAgent",
     "display_name": "Bill Ackman Agent",
-    "url": "http://localhost:10012/",
+    "url": "local://bill_ackman_agent",
     "description": "Event-driven and activist-investor style analysis focused on catalysts and corporate structure improvements.",
     "skills": [
         {
@@ -10,16 +10,19 @@
             "description": "Event-driven and activist-investor style analysis focused on catalysts and corporate structure improvements.",
             "examples": [
                 "Identify potential activist targets with undervalued assets",
-                "What catalysts could unlock value at Company X?"
+                "What catalysts could unlock value at Company X?",
+                "Analyze management quality and corporate governance issues",
+                "Find special situations and event-driven opportunities"
             ],
             "tags": [
                 "activist",
                 "event-driven",
-                "catalyst"
+                "catalyst",
+                "fundamental-analysis"
             ]
         }
     ],
-    "enabled": false,
+    "enabled": true,
     "metadata": {
         "version": "1.0.0",
         "author": "ValueCell Team",
@@ -27,6 +30,7 @@
             "activist",
             "event-driven",
             "catalyst"
-        ]
+        ],
+        "note": "Local agent using DeepSeek API"
     }
 }

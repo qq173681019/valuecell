@@ -79,7 +79,7 @@ ValueCell 是一個社群驅動的多智能體金融應用產品，我們的計�
 - **其他智能體**：更多智能體正在規劃中...
 
 ## 彈性整合
-- **多家大型語言模型供應商**：支援 OpenRouter、SiliconFlow、Google 與 OpenAI
+- **多家大型語言模型供應商**：支援 OpenRouter、SiliconFlow、Google、OpenAI 與 DeepSeek
 - **熱門市場資料**：涵蓋美國市場、加密貨幣、香港市場、中國市場等
 - **多智能體框架相容**：透過 A2A 協議，支援 LangChain、Agno 等主流 Agent 框架，進行研發整合
 
@@ -123,6 +123,8 @@ ValueCell 是以 Python 為基礎的應用，並具備完整的前端操作介�
 - **其他配置**：對於調研類型的 Agent 來說，需要配置更多環境變數，可以仔細閱讀 `.env.example` 中的說明
 
 - **官方推薦**：配置 OpenRouter + 任意提供嵌入模型的供應商。原因：可以快速實現多廠商模型切換，以及 RAG+Memory 的 AI 能力
+
+- **中國大陸用戶推薦**：若因地區限制無法使用 OpenAI，可使用 DeepSeek 作為替代方案。請參考 [DeepSeek 配置指南](docs/DEEPSEEK_SETUP.md)
   
 
 ## 啟動應用程式
