@@ -20,25 +20,39 @@ from agno.vectordb.search import SearchType
 import valuecell.utils.model as model_utils_mod
 from valuecell.utils.db import resolve_lancedb_uri
 
-# Create embedder using the configuration system
-# This will:
-# - Check EMBEDDER_MODEL_ID env var first
-# - Auto-select provider with embedding support (e.g., SiliconFlow if SILICONFLOW_API_KEY is set)
-# - Use provider's default embedding model if not specified
-# - Fall back to other providers if primary fails
-embedder = model_utils_mod.get_embedder_for_agent("research_agent")
-
-# Alternative usage examples:
-# embedder = get_embedder()  # Use default env key
-# embedder = get_embedder("EMBEDDER_MODEL_ID", dimensions=3072)  # Override dimensions
-# embedder = get_embedder_for_agent("research_agent")  # Use agent-specific config
-
-# Create vector database with the configured embedder
-vector_db = LanceDb(
-    table_name="research_agent_knowledge_base",
-    uri=resolve_lancedb_uri(),
-    embedder=embedder,
-    # reranker=reranker,  # Optional: can be configured later, reranker config in modelprovider yaml file if needed
-    search_type=SearchType.hybrid,
-    use_tantivy=False,
-)
+# Try to create embedder, but provide fallback if embeddings are disabled
+try:
+    # Create embedder using the configuration system
+    # This will:
+    # - Check EMBEDDER_MODEL_ID env var first
+    # - Auto-select provider with embedding support (e.g., SiliconFlow if SILICONFLOW_API_KEY is set)
+    # - Use provider's default embedding model if not specified
+    # - Fall back to other providers if primary fails
+    embedder = model_utils_mod.get_embedder_for_agent("research_agent")
+    
+    # Create vector database with the configured embedder
+    vector_db = LanceDb(
+        table_name="research_agent_knowledge_base",
+        uri=resolve_lancedb_uri(),
+        embedder=embedder,
+        # reranker=reranker,  # Optional: can be configured later, reranker config in modelprovider yaml file if needed
+        search_type=SearchType.hybrid,
+        use_tantivy=False,
+    )
+except Exception as e:
+    print(f"Warning: Embeddings disabled or unavailable ({e}). Knowledge base search will be disabled.")
+    # Create a mock vector_db that returns empty results
+    class MockVectorDb:
+        async def search_async(self, *args, **kwargs):
+            return []
+        
+        def search(self, *args, **kwargs):
+            return []
+            
+        async def upsert_async(self, *args, **kwargs):
+            pass
+            
+        def upsert(self, *args, **kwargs):
+            pass
+    
+    vector_db = MockVectorDb()

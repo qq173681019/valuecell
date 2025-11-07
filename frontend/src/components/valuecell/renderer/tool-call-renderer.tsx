@@ -14,8 +14,31 @@ import MarkdownRenderer from "./markdown-renderer";
 
 const ToolCallRenderer: FC<ToolCallRendererProps> = ({ content }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { tool_name, tool_result } = parse(content);
-  const tool_result_array = parse(tool_result);
+  
+  // Safely parse the content with error handling
+  let tool_name = "";
+  let tool_result = "";
+  let tool_result_array: any = null;
+  
+  try {
+    const parsed = parse(content);
+    tool_name = parsed?.tool_name || "";
+    tool_result = parsed?.tool_result || "";
+    
+    if (tool_result) {
+      try {
+        tool_result_array = parse(tool_result);
+      } catch (error) {
+        console.warn("Failed to parse tool_result:", error);
+        tool_result_array = null;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to parse tool call content:", error, "Content:", content);
+    tool_name = "Parse Error";
+    tool_result = "";
+    tool_result_array = null;
+  }
 
   return (
     <Collapsible
